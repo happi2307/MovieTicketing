@@ -38,9 +38,29 @@ const Booking = () => {
     setSelectedSeats(seats);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedSeats.length !== numPeople) return;
-    navigate(`/checkout/${showtime.ShowID}?seats=${selectedSeats.map(s => s.id).join(',')}`);
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.UserID;
+    try {
+      const res = await fetch('/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          showId: showtime.ShowID,
+          totalAmount
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        navigate(`/checkout/${showtime.ShowID}?seats=${selectedSeats.map(s => s.id).join(',')}`);
+      } else {
+        alert('Booking failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Booking failed. Please try again.');
+    }
   };
 
   // Calculate total price: use showtime.TicketPrice for standard, TicketPrice+10 for premium

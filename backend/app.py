@@ -316,5 +316,24 @@ def get_showtimes_by_movie_and_theater():
             s['ShowTime'] = str(s['ShowTime'])
     return jsonify(showtimes)
 
+@app.route('/booking', methods=['POST'])
+def create_booking():
+    data = request.json
+    user_id = data.get('userId')
+    show_id = data.get('showId')
+    total_amount = data.get('totalAmount')
+    if not user_id or not show_id or total_amount is None:
+        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO booking (UserID, ShowID, BookingDate, TotalAmount) VALUES (%s, %s, NOW(), %s)",
+        (user_id, show_id, total_amount)
+    )
+    db.commit()
+    booking_id = cursor.lastrowid
+    db.close()
+    return jsonify({'success': True, 'bookingId': booking_id})
+
 if __name__ == '__main__':
     app.run(debug=True)
