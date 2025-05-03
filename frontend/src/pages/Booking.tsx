@@ -43,6 +43,10 @@ const Booking = () => {
     navigate(`/checkout/${showtime.ShowID}?seats=${selectedSeats.map(s => s.id).join(',')}`);
   };
 
+  // Calculate total price: use showtime.TicketPrice for standard, TicketPrice+10 for premium
+  const ticketPrice = showtime?.TicketPrice || showtime?.ticketPrice || 0;
+  const totalAmount = selectedSeats.reduce((sum, seat) => sum + (seat.type === 'premium' ? (Number(ticketPrice) + 10) : Number(ticketPrice)), 0);
+
   if (loading) return <div className="text-center py-16 text-lg">Loading...</div>;
   if (error) return <div className="text-center py-16 text-destructive">{error}</div>;
   if (!showtime || !movie) return null;
@@ -86,6 +90,9 @@ const Booking = () => {
             }}
             maxSelectable={numPeople}
           />
+          <div className="flex justify-end mt-4">
+            <span className="font-semibold text-lg">Total: ₹{totalAmount.toFixed(2)}</span>
+          </div>
           <Separator className="my-4" />
           <Button 
             className="w-full" 

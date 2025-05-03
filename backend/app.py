@@ -224,34 +224,41 @@ def get_showtime_by_id(showtime_id):
         return jsonify({}), 404
     cursor.execute("SELECT * FROM movie WHERE MovieID = %s", (s["MovieID"],))
     m = cursor.fetchone()
+    # Fetch screen info for seat layout
+    screen_id = s["ScreenID"]
+    cursor.execute("SELECT * FROM screen WHERE ScreenID = %s", (screen_id,))
+    screen = cursor.fetchone()
     db.close()
+    seat_capacity = screen["SeatCapacity"] if screen else 96
+    # Generate seat layout: try to make it as square as possible
+    import math
+    n_cols = math.ceil(math.sqrt(seat_capacity))
+    n_rows = math.ceil(seat_capacity / n_cols)
+    # Use letters for rows (A, B, ...)
+    row_labels = [chr(ord('A') + i) for i in range(n_rows)]
+    seats = []
+    for row_idx, row in enumerate(row_labels):
+        for col in range(1, n_cols + 1):
+            seat_num = row_idx * n_cols + (col - 1) + 1
+            if seat_num > seat_capacity:
+                break
+            # Mark last 2 rows as premium
+            seat_type = 'premium' if row_idx >= n_rows - 2 else 'standard'
+            seats.append({
+                'id': f'{row}{col}',
+                'row': row,
+                'number': col,
+                'type': seat_type,
+                'status': 'available'
+            })
     # Convert date/time fields to string for JSON serialization
     if 'Date' in s and hasattr(s['Date'], 'isoformat'):
         s['Date'] = s['Date'].isoformat()
     if 'ShowTime' in s:
         s['ShowTime'] = str(s['ShowTime'])
-    # Convert any timedelta fields to string
     for k, v in s.items():
         if type(v).__name__ == 'timedelta':
             s[k] = str(v)
-    # For demo, generate seats as before
-    seats = []
-    rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-    seatsPerRow = 12
-    for row in rows:
-        for i in range(1, seatsPerRow + 1):
-            seatType = 'standard'
-            if (row == 'D' or row == 'E') and 4 <= i <= 9:
-                seatType = 'premium'
-            if row == 'H' and (i == 1 or i == 12):
-                seatType = 'accessible'
-            seats.append({
-                'id': f'{row}{i}',
-                'row': row,
-                'number': i,
-                'type': seatType,
-                'status': 'available'
-            })
     return jsonify({
         'showtime': s,
         'movie': {
