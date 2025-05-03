@@ -1,0 +1,88 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 12% 5%;
+    --foreground: 210 40% 98%;
+
+    --card: 228 9% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 228 9% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 350 90% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 209 76% 27%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 228 9% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 350 90% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .movie-card-hover {
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/20;
+  }
+  
+  .seat {
+    @apply w-8 h-8 m-1 rounded-t-lg text-center flex items-center justify-center cursor-pointer transition-colors;
+  }
+  
+  .seat-available {
+    @apply bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  .seat-selected {
+    @apply bg-accent text-accent-foreground;
+  }
+  
+  .seat-reserved {
+    @apply bg-gray-800 text-gray-700 cursor-not-allowed;
+  }
+  
+  .screen {
+    @apply w-4/5 h-2 bg-primary mx-auto rounded-lg shadow-lg mb-10 relative;
+  }
+  
+  .screen::after {
+    content: "SCREEN";
+    @apply absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-gray-500;
+  }
+}
