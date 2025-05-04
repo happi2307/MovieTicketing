@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -20,8 +19,9 @@ interface GroupedShowtimes {
 const ShowtimeSelector = ({ showtimes }: ShowtimeSelectorProps) => {
   const navigate = useNavigate();
   
-  // Group showtimes by date
+  // Group showtimes by date, skip invalid dates
   const groupedByDate = showtimes.reduce<GroupedShowtimes>((acc, showtime) => {
+    if (!showtime.date || isNaN(new Date(showtime.date).getTime())) return acc;
     if (!acc[showtime.date]) {
       acc[showtime.date] = {
         date: showtime.date,
@@ -49,7 +49,7 @@ const ShowtimeSelector = ({ showtimes }: ShowtimeSelectorProps) => {
     <div className="mt-8">
       <h3 className="text-xl font-semibold mb-4">Showtimes</h3>
       
-      <Tabs defaultValue={dates[0].date} className="w-full">
+      <Tabs defaultValue={dates[0]?.date} className="w-full">
         <TabsList className="bg-card mb-4 overflow-x-auto flex w-full">
           {dates.map(dateGroup => (
             <TabsTrigger 
@@ -57,7 +57,9 @@ const ShowtimeSelector = ({ showtimes }: ShowtimeSelectorProps) => {
               value={dateGroup.date}
               className="text-sm"
             >
-              {format(new Date(dateGroup.date), 'EEE, MMM d')}
+              {dateGroup.date && !isNaN(new Date(dateGroup.date).getTime())
+                ? format(new Date(dateGroup.date), 'EEE, MMM d')
+                : 'Invalid date'}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -71,7 +73,7 @@ const ShowtimeSelector = ({ showtimes }: ShowtimeSelectorProps) => {
                     <h4 className="font-medium mb-3">{theater}</h4>
                     <div className="flex flex-wrap gap-2">
                       {dateGroup.times
-                        .filter(t => t.theater === theater)
+                        .filter(t => t.theater === theater && t.time && t.time !== '' && !isNaN(new Date(`${dateGroup.date}T${t.time}`).getTime()))
                         .sort((a, b) => a.time.localeCompare(b.time))
                         .map(showtime => (
                           <Button

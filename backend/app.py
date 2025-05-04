@@ -150,9 +150,8 @@ def get_upcoming_movies():
     cursor = db.cursor(dictionary=True)
     today = date.today().isoformat()
     cursor.execute('''
-        SELECT DISTINCT m.* FROM movie m
-        JOIN movieshow s ON m.MovieID = s.MovieID
-        WHERE s.Date > %s
+        SELECT * FROM movie
+        WHERE ReleaseDate > %s
     ''', (today,))
     movies = cursor.fetchall()
     db.close()
@@ -224,34 +223,30 @@ def get_showtime_by_id(showtime_id):
         return jsonify({}), 404
     cursor.execute("SELECT * FROM movie WHERE MovieID = %s", (s["MovieID"],))
     m = cursor.fetchone()
-    # Fetch screen info for seat layout
     screen_id = s["ScreenID"]
-    cursor.execute("SELECT * FROM screen WHERE ScreenID = %s", (screen_id,))
-    screen = cursor.fetchone()
+    # Get only booked seats for this screen
+    cursor.execute("SELECT SeatNumber FROM seat WHERE ScreenID = %s AND Availability = 0", (screen_id,))
+    booked_seats = [row['SeatNumber'] for row in cursor.fetchall()]
     db.close()
-    seat_capacity = screen["SeatCapacity"] if screen else 96
-    # Generate seat layout: try to make it as square as possible
-    import math
-    n_cols = math.ceil(math.sqrt(seat_capacity))
-    n_rows = math.ceil(seat_capacity / n_cols)
-    # Use letters for rows (A, B, ...)
-    row_labels = [chr(ord('A') + i) for i in range(n_rows)]
+    # Generate all possible seats (A1-H12)
+    rows = ['A','B','C','D','E','F','G','H']
+    seats_per_row = 12
     seats = []
-    for row_idx, row in enumerate(row_labels):
-        for col in range(1, n_cols + 1):
-            seat_num = row_idx * n_cols + (col - 1) + 1
-            if seat_num > seat_capacity:
-                break
-            # Mark last 2 rows as premium
-            seat_type = 'premium' if row_idx >= n_rows - 2 else 'standard'
+    for row in rows:
+        for i in range(1, seats_per_row + 1):
+            seat_number = f"{row}{i}"
+            # Mark premium at the back (rows G and H)
+            if row in ['G', 'H']:
+                seat_type = 'premium'
+            else:
+                seat_type = 'regular'
             seats.append({
-                'id': f'{row}{col}',
+                'id': seat_number,
                 'row': row,
-                'number': col,
+                'number': i,
                 'type': seat_type,
-                'status': 'available'
+                'status': 'reserved' if seat_number in booked_seats else 'available'
             })
-    # Convert date/time fields to string for JSON serialization
     if 'Date' in s and hasattr(s['Date'], 'isoformat'):
         s['Date'] = s['Date'].isoformat()
     if 'ShowTime' in s:
@@ -322,18 +317,112 @@ def create_booking():
     user_id = data.get('userId')
     show_id = data.get('showId')
     total_amount = data.get('totalAmount')
-    if not user_id or not show_id or total_amount is None:
+    seat_numbers = data.get('seatNumbers', [])  # e.g. ['A1', 'B4']
+    seat_types = data.get('seatTypes', [])      # e.g. ['Regular', 'Premium']
+
+    if not user_id or not show_id or total_amount is None or not seat_numbers:
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+
     db = get_db()
-    cursor = db.cursor()
-    cursor.execute(
-        "INSERT INTO booking (UserID, ShowID, BookingDate, TotalAmount) VALUES (%s, %s, NOW(), %s)",
-        (user_id, show_id, total_amount)
-    )
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Get ScreenID for this show
+        cursor.execute("SELECT ScreenID FROM movieshow WHERE ShowID = %s", (show_id,))
+        show = cursor.fetchone()
+        if not show:
+            db.close()
+            return jsonify({'success': False, 'message': 'Show not found'}), 404
+        screen_id = show['ScreenID']
+
+        # Insert booking
+        cursor = db.cursor()
+        cursor.execute(
+            "INSERT INTO booking (UserID, ShowID, BookingDate, TotalAmount) VALUES (%s, %s, NOW(), %s)",
+            (user_id, show_id, total_amount)
+        )
+        db.commit()
+        booking_id = cursor.lastrowid
+
+        # For each seatNumber, update or insert into seat table as booked
+        for idx, seat_number in enumerate(seat_numbers):
+            seat_type = seat_types[idx] if idx < len(seat_types) else 'Regular'
+            cursor.execute(
+                "UPDATE seat SET Availability = 0 WHERE ScreenID = %s AND SeatNumber = %s",
+                (screen_id, seat_number)
+            )
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    "INSERT INTO seat (ScreenID, SeatNumber, SeatType, Availability) VALUES (%s, %s, %s, 0)",
+                    (screen_id, seat_number, seat_type)
+                )
+        db.commit()
+        db.close()
+        return jsonify({'success': True, 'bookingId': booking_id})
+    except Exception as e:
+        print("Booking error:", e)  # Add this line
+        db.rollback()
+        db.close()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/populate-seats/<int:screen_id>', methods=['POST'])
+def populate_seats(screen_id):
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+    seats_per_row = 12
+    inserted = 0
+    for row in rows:
+        for i in range(1, seats_per_row + 1):
+            seat_number = f"{row}{i}"
+            # Determine seat type
+            if (row == 'D' or row == 'E') and 4 <= i <= 9:
+                seat_type = 'Premium'
+            elif row == 'H' and (i == 1 or i == 12):
+                seat_type = 'Accessible'
+            else:
+                seat_type = 'Regular'
+            # Only insert if not already present
+            cursor.execute("SELECT SeatID FROM seat WHERE ScreenID = %s AND SeatNumber = %s", (screen_id, seat_number))
+            if not cursor.fetchone():
+                cursor.execute(
+                    "INSERT INTO seat (ScreenID, SeatNumber, SeatType, Availability) VALUES (%s, %s, %s, 1)",
+                    (screen_id, seat_number, seat_type)
+                )
+                inserted += 1
     db.commit()
-    booking_id = cursor.lastrowid
     db.close()
-    return jsonify({'success': True, 'bookingId': booking_id})
+    return jsonify({'success': True, 'inserted': inserted})
+
+@app.route('/populate-seats-all', methods=['POST'])
+def populate_seats_all():
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT ScreenID FROM screen")
+    screens = cursor.fetchall()
+    total_inserted = 0
+    for screen in screens:
+        screen_id = screen['ScreenID']
+        rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        seats_per_row = 12
+        for row in rows:
+            for i in range(1, seats_per_row + 1):
+                seat_number = f"{row}{i}"
+                if (row == 'D' or row == 'E') and 4 <= i <= 9:
+                    seat_type = 'Premium'
+                elif row == 'H' and (i == 1 or i == 12):
+                    seat_type = 'Accessible'
+                else:
+                    seat_type = 'Regular'
+                cursor.execute("SELECT SeatID FROM seat WHERE ScreenID = %s AND SeatNumber = %s", (screen_id, seat_number))
+                if not cursor.fetchone():
+                    cursor.execute(
+                        "INSERT INTO seat (ScreenID, SeatNumber, SeatType, Availability) VALUES (%s, %s, %s, 1)",
+                        (screen_id, seat_number, seat_type)
+                    )
+                    total_inserted += 1
+    db.commit()
+    db.close()
+    return jsonify({'success': True, 'inserted': total_inserted})
 
 if __name__ == '__main__':
     app.run(debug=True)

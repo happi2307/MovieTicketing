@@ -42,7 +42,7 @@ const MovieDetails = () => {
 
   if (loading) return <div className="text-center py-16 text-lg">Loading...</div>;
   if (error) return <div className="text-center py-16 text-destructive">{error}</div>;
-  if (!movie) return null;
+  if (!movie && !loading) return <div className="text-center py-16 text-destructive">Movie not found.</div>;
 
   return (
     <>

@@ -61,13 +61,13 @@ const SeatGrid = ({ seats, onSeatSelect, maxSelectable }: SeatGridProps) => {
                           'seat',
                           status === 'available' && 'seat-available',
                           status === 'selected' && 'seat-selected',
-                          status === 'reserved' && 'seat-reserved',
+                          (status === 'reserved' || seat.status === 'reserved') && 'seat-reserved',
                           seat.type === 'premium' && 'border border-cinema-gold',
                           seat.type === 'accessible' && 'rounded-md'
                         )}
                         onClick={() => handleSeatClick(seat)}
-                        disabled={seat.status === 'reserved'}
-                        title={`${seat.row}${seat.number} - ${seat.type} seat`}
+                        disabled={seat.status === 'reserved' || status === 'reserved'}
+                        title={`${seat.row}${seat.number} - ${seat.type} seat${seat.status === 'reserved' ? ' (Reserved)' : ''}`}
                       >
                         {seat.number}
                       </button>

@@ -16,6 +16,8 @@ export default defineConfig(({ mode }) => ({
       '/showtime': 'http://localhost:5000',
       '/showtimes': 'http://localhost:5000',
       '/theaters': 'http://localhost:5000',
+      '/booking': 'http://localhost:5000',
+      '/checkout': 'http://localhost:5000',
     },
   },
   plugins: [

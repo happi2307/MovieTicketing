@@ -49,7 +49,9 @@ const Booking = () => {
         body: JSON.stringify({
           userId,
           showId: showtime.ShowID,
-          totalAmount
+          totalAmount,
+          seatNumbers: selectedSeats.map((s: any) => s.id),
+          seatTypes: selectedSeats.map((s: any) => (s.type === 'premium' ? 'Premium' : 'Regular'))
         })
       });
       const data = await res.json();

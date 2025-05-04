@@ -12,6 +12,7 @@ interface MovieListProps {
 
 const MovieList = ({ movies, title = "Now Playing" }: MovieListProps) => {
   const [filter, setFilter] = useState<string>("all");
+  const [showAll, setShowAll] = useState(false);
   const navigate = useNavigate();
   
   // Get unique genres from all movies
@@ -22,6 +23,8 @@ const MovieList = ({ movies, title = "Now Playing" }: MovieListProps) => {
     ? movies 
     : movies.filter(movie => movie.genre.includes(filter));
 
+  const moviesToShow = showAll ? filteredMovies : filteredMovies.slice(0, 6);
+
   const handleBook = (movieId: number) => {
     navigate(`/theaters?movieId=${movieId}`);
   };
@@ -31,7 +34,11 @@ const MovieList = ({ movies, title = "Now Playing" }: MovieListProps) => {
       <div className="container px-4 mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">{title}</h2>
-          <Button variant="link" className="text-primary">View All</Button>
+          {filteredMovies.length > 6 && (
+            <Button variant="link" className="text-primary" onClick={() => setShowAll(v => !v)}>
+              {showAll ? 'Show Less' : 'View All'}
+            </Button>
+          )}
         </div>
         
         <Tabs defaultValue="all" className="mb-6">
@@ -50,7 +57,7 @@ const MovieList = ({ movies, title = "Now Playing" }: MovieListProps) => {
         </Tabs>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-          {filteredMovies.map(movie => (
+          {moviesToShow.map(movie => (
             <div key={movie.id} className="relative group">
               <MovieCard movie={movie} />
               <Button className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleBook(movie.id)}>

@@ -18,8 +18,8 @@ const Movies = () => {
     ])
       .then(([nowData, pastData, upcomingData]) => {
         setNow(nowData);
-        setPast(pastData);
         setUpcoming(upcomingData);
+        setPast(pastData);
         setLoading(false);
       })
       .catch(() => {
