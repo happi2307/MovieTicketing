@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => ({
       '/booking': 'http://localhost:5000',
       '/checkout': 'http://localhost:5000',
       '/user': 'http://localhost:5000',
+      '/admin': 'http://localhost:5000',
     },
   },
   plugins: [

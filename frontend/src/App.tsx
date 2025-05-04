@@ -15,6 +15,7 @@ import Movies from "./pages/Movies";
 import Theaters from "./pages/Theaters";
 import Booking from "./pages/Booking";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
 
 // Create a new function to protect routes
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -95,6 +96,7 @@ const App = () => {
                 <Profile />
               </ProtectedRoute>
             } />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

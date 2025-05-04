@@ -476,5 +476,45 @@ def get_user_bookings(user_id):
     response.headers['Pragma'] = 'no-cache'
     return response
 
+@app.route('/admin/bookings', methods=['GET'])
+def admin_get_all_bookings():
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM booking ORDER BY BookingDate DESC")
+    bookings = cursor.fetchall()
+    result = []
+    for booking in bookings:
+        show_id = booking['ShowID']
+        # Get showtime info
+        cursor.execute("SELECT * FROM movieshow WHERE ShowID = %s", (show_id,))
+        show = cursor.fetchone()
+        if not show:
+            continue
+        # Get movie info
+        cursor.execute("SELECT * FROM movie WHERE MovieID = %s", (show['MovieID'],))
+        movie = cursor.fetchone()
+        # Get theater info
+        cursor.execute("SELECT * FROM theater WHERE TheaterID = %s", (show['TheaterID'],))
+        theater = cursor.fetchone()
+        # Get booked seats for this booking from booking_seat
+        cursor2 = db.cursor(dictionary=True)
+        cursor2.execute("SELECT SeatNumber FROM booking_seat WHERE BookingID = %s AND ScreenID = %s", (booking['BookingID'], show['ScreenID']))
+        seats = [row['SeatNumber'] for row in cursor2.fetchall()]
+        cursor2.close()
+        result.append({
+            'bookingId': booking['BookingID'],
+            'userId': booking['UserID'],
+            'movieTitle': movie['Title'] if movie else 'Unknown',
+            'theaterName': theater['Name'] if theater else 'Unknown',
+            'screenId': show['ScreenID'],
+            'showDate': str(show['Date']),
+            'showTime': str(show['ShowTime']),
+            'seats': seats,
+            'totalAmount': float(booking['TotalAmount']),
+            'bookingDate': booking['BookingDate'].strftime('%Y-%m-%d %H:%M') if hasattr(booking['BookingDate'], 'strftime') else str(booking['BookingDate'])
+        })
+    db.close()
+    return jsonify({'bookings': result})
+
 if __name__ == '__main__':
     app.run(debug=True)

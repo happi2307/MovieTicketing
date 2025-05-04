@@ -9,10 +9,12 @@ const Navbar = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [username, setUsername] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUsername(user.Name || null);
+    setIsAdmin(user.UserType === 'Admin');
   }, []);
 
   const handleLogout = () => {
@@ -43,6 +45,11 @@ const Navbar = () => {
             <Link to="/theaters" className="text-foreground hover:text-primary transition-colors">
               Theaters
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="text-foreground hover:text-primary transition-colors">
+                Admin
+              </Link>
+            )}
           </div>
         </div>
         
