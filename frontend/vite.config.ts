@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
       '/theaters': 'http://localhost:5000',
       '/booking': 'http://localhost:5000',
       '/checkout': 'http://localhost:5000',
+      '/user': 'http://localhost:5000',
     },
   },
   plugins: [

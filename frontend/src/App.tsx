@@ -14,6 +14,7 @@ import SignUp from "./pages/SignUp";
 import Movies from "./pages/Movies";
 import Theaters from "./pages/Theaters";
 import Booking from "./pages/Booking";
+import Profile from "./pages/Profile";
 
 // Create a new function to protect routes
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -87,6 +88,11 @@ const App = () => {
             <Route path="/booking/:showtimeId" element={
               <ProtectedRoute>
                 <Booking />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

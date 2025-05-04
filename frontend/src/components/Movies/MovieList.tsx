@@ -60,9 +60,11 @@ const MovieList = ({ movies, title = "Now Playing" }: MovieListProps) => {
           {moviesToShow.map(movie => (
             <div key={movie.id} className="relative group">
               <MovieCard movie={movie} />
-              <Button className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleBook(movie.id)}>
-                Book
-              </Button>
+              {title !== 'Past' && (
+                <Button className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleBook(movie.id)}>
+                  Book
+                </Button>
+              )}
             </div>
           ))}
         </div>

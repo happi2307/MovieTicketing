@@ -80,7 +80,6 @@ const ShowtimeSelector = ({ showtimes }: ShowtimeSelectorProps) => {
                             key={showtime.id}
                             variant="outline"
                             size="sm"
-                            onClick={() => handleSelectShowtime(showtime.id)}
                           >
                             {showtime.time}
                             <span className="text-xs ml-2 opacity-70">{showtime.screen}</span>

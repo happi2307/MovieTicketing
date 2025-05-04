@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import mysql.connector
 import os
@@ -204,13 +204,17 @@ def get_showtimes_by_movie_id(movie_id):
     cursor.execute("SELECT * FROM movieshow WHERE MovieID = %s", (movie_id,))
     showtimes = cursor.fetchall()
     db.close()
-    # Convert date/time fields to string for JSON serialization
+    mapped_showtimes = []
     for s in showtimes:
-        if 'Date' in s and hasattr(s['Date'], 'isoformat'):
-            s['Date'] = s['Date'].isoformat()
-        if 'ShowTime' in s:
-            s['ShowTime'] = str(s['ShowTime'])
-    return jsonify(showtimes)
+        mapped_showtimes.append({
+            "id": s["ShowID"],
+            "date": str(s["Date"]),
+            "time": str(s["ShowTime"]),
+            "theater": s.get("TheaterID", ""),
+            "screen": s.get("ScreenID", ""),
+            "price": float(s["TicketPrice"]) if "TicketPrice" in s else None,
+        })
+    return jsonify(mapped_showtimes)
 
 @app.route('/showtime/<int:showtime_id>', methods=['GET'])
 def get_showtime_by_id(showtime_id):
@@ -343,7 +347,7 @@ def create_booking():
         db.commit()
         booking_id = cursor.lastrowid
 
-        # For each seatNumber, update or insert into seat table as booked
+        # For each seatNumber, update or insert into seat table as booked, and insert into booking_seat
         for idx, seat_number in enumerate(seat_numbers):
             seat_type = seat_types[idx] if idx < len(seat_types) else 'Regular'
             cursor.execute(
@@ -355,11 +359,16 @@ def create_booking():
                     "INSERT INTO seat (ScreenID, SeatNumber, SeatType, Availability) VALUES (%s, %s, %s, 0)",
                     (screen_id, seat_number, seat_type)
                 )
+            # Insert into booking_seat
+            cursor.execute(
+                "INSERT INTO booking_seat (BookingID, SeatNumber, ScreenID) VALUES (%s, %s, %s)",
+                (booking_id, seat_number, screen_id)
+            )
         db.commit()
         db.close()
         return jsonify({'success': True, 'bookingId': booking_id})
     except Exception as e:
-        print("Booking error:", e)  # Add this line
+        print("Booking error:", e)
         db.rollback()
         db.close()
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -423,6 +432,49 @@ def populate_seats_all():
     db.commit()
     db.close()
     return jsonify({'success': True, 'inserted': total_inserted})
+
+@app.route('/user/<int:user_id>/bookings', methods=['GET'])
+def get_user_bookings(user_id):
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    # Get all bookings for the user
+    cursor.execute("SELECT * FROM booking WHERE UserID = %s ORDER BY BookingDate DESC", (user_id,))
+    bookings = cursor.fetchall()
+    result = []
+    for booking in bookings:
+        show_id = booking['ShowID']
+        # Get showtime info
+        cursor.execute("SELECT * FROM movieshow WHERE ShowID = %s", (show_id,))
+        show = cursor.fetchone()
+        if not show:
+            continue
+        # Get movie info
+        cursor.execute("SELECT * FROM movie WHERE MovieID = %s", (show['MovieID'],))
+        movie = cursor.fetchone()
+        # Get theater info
+        cursor.execute("SELECT * FROM theater WHERE TheaterID = %s", (show['TheaterID'],))
+        theater = cursor.fetchone()
+        # Get booked seats for this booking from booking_seat
+        cursor2 = db.cursor(dictionary=True)
+        cursor2.execute("SELECT SeatNumber FROM booking_seat WHERE BookingID = %s AND ScreenID = %s", (booking['BookingID'], show['ScreenID']))
+        seats = [row['SeatNumber'] for row in cursor2.fetchall()]
+        cursor2.close()
+        result.append({
+            'bookingId': booking['BookingID'],
+            'movieTitle': movie['Title'] if movie else 'Unknown',
+            'theaterName': theater['Name'] if theater else 'Unknown',
+            'screenId': show['ScreenID'],
+            'showDate': str(show['Date']),
+            'showTime': str(show['ShowTime']),
+            'seats': seats,
+            'totalAmount': float(booking['TotalAmount']),
+            'bookingDate': booking['BookingDate'].strftime('%Y-%m-%d %H:%M') if hasattr(booking['BookingDate'], 'strftime') else str(booking['BookingDate'])
+        })
+    db.close()
+    response = make_response(jsonify({'bookings': result}))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)

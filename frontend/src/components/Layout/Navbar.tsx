@@ -1,7 +1,6 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, Menu, LogOut } from 'lucide-react';
+import { User, Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useToast } from "@/components/ui/use-toast";
@@ -9,6 +8,12 @@ import { useToast } from "@/components/ui/use-toast";
 const Navbar = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUsername(user.Name || null);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -42,19 +47,14 @@ const Navbar = () => {
         </div>
         
         <div className="hidden md:flex items-center space-x-4">
-          <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Search movies..." 
-              className="px-4 py-1 pr-8 bg-muted text-foreground rounded-md w-48 focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          </div>
-          
-          <Button variant="ghost" size="icon">
-            <User className="w-5 h-5" />
+          {username && (
+            <span className="font-medium text-foreground mr-2">{username}</span>
+          )}
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/profile">
+              <User className="w-5 h-5" />
+            </Link>
           </Button>
-          
           <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
             <LogOut className="w-4 h-4" />
             Logout
@@ -79,14 +79,6 @@ const Navbar = () => {
                 <Link to="/theaters" className="text-foreground hover:text-primary transition-colors px-2 py-2">
                   Theaters
                 </Link>
-                <div className="relative mt-4">
-                  <input 
-                    type="text" 
-                    placeholder="Search movies..." 
-                    className="px-4 py-2 pr-8 bg-muted text-foreground rounded-md w-full focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                </div>
                 <Button onClick={handleLogout} className="mt-4 flex items-center gap-2">
                   <LogOut className="w-4 h-4" />
                   Logout
